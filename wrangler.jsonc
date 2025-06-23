@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "honox-docs",
+  "main": "./dist/index.js",
+  "compatibility_date": "2025-06-16",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "observability": {
+    "enabled": true
+  },
+  "placement": { "mode": "smart" },
+  "assets": {
+    "directory": "./dist"
+  }
+}
