@@ -25,13 +25,14 @@ interface HeadingInfo {
 // IMPORTANT: For this to work effectively and provide raw content for gray-matter,
 // we need to import them as raw strings.
 const markdownModules = import.meta.glob("../../../../content/docs/*.md", {
-  as: "raw", // Import as raw string
+  query: "?raw",
+  import: "default",
   eager: true, // Eagerly load them
 });
 
 const docPages = Object.entries(markdownModules).map(([path, rawContent]) => {
   const slug = path.split("/").pop()?.replace(".md", "") ?? "";
-  const { data } = matter(rawContent); // Parse frontmatter
+  const { data } = matter(rawContent as string); // Parse frontmatter, ensure rawContent is string
   return {
     slug,
     title: (data as Frontmatter).title ?? "Untitled",
