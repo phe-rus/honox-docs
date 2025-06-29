@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
     return {
       ssr: {
         external: ['react', 'react-dom', '@tabler/icons-react'], // Externalize problematic dependencies
-        noExternal: [/^@hono\//] // Ensure HonoX modules are bundled
+        noExternal: [/^@hono\//, 'gray-matter'] // Ensure HonoX modules and gray-matter are bundled
       },
       optimizeDeps: {
         exclude: ["@tabler/icons-react", '@radix-ui/react-slot'], // Exclude from pre-bundling
