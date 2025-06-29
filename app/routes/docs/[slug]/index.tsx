@@ -1,85 +1,15 @@
 import { createRoute } from "honox/factory";
-import { marked } from "marked";
-import matter from "gray-matter";
-
-// Type for the frontmatter
-interface Frontmatter {
-  title?: string;
-}
-
-// Type for the imported Markdown modules
-interface MarkdownModule {
-  default: string; // This will hold the raw Markdown string
-  frontmatter: Frontmatter;
-}
-
-// Type for individual heading
-interface HeadingInfo {
-  level: number;
-  text: string;
-  id: string;
-}
-
-// Use Vite's import.meta.glob to import all .md files from content/docs
-// IMPORTANT: For this to work effectively and provide raw content for gray-matter,
-// we need to import them as raw strings.
-const markdownModules = import.meta.glob("../../../../content/docs/*.md", {
-  as: "raw", // Import as raw string
-  eager: true, // Eagerly load them
-});
-
-const docPages = Object.entries(markdownModules).map(([path, rawContent]) => {
-  const slug = path.split("/").pop()?.replace(".md", "") ?? "";
-  const { data } = matter(rawContent); // Parse frontmatter
-  return {
-    slug,
-    title: (data as Frontmatter).title ?? "Untitled",
-  };
-}).sort((a, b) => a.title.localeCompare(b.title)); // Sort pages alphabetically by title for consistent sidebar
-
-async function getMarkdownContent(
-  slug: string
-): Promise<{ contentHtml: string; title: string; headings: HeadingInfo[] }> {
-  const filePath = `../../../../content/docs/${slug}.md`;
-
-  if (!markdownModules[filePath]) {
-    return {
-      title: "Not Found",
-      contentHtml: "<p>Documentation page not found.</p>",
-      headings: [],
-    };
-  }
-
-  const rawContent = markdownModules[filePath];
-  const { data, content: markdownContent } = matter(rawContent);
-  const frontmatter = data as Frontmatter;
-
-  const headings: HeadingInfo[] = [];
-  const renderer = new marked.Renderer();
-
-  renderer.heading.apply = function ({ text, depth, raw, slugger }: { text: string; depth: number; raw: string; slugger: any }) {
-    const id = slugger.slug(raw);
-    headings.push({ level: depth, text, id });
-    return `<h${depth} id="${id}">${text}</h${depth}>`;
-  };
-
-  marked.use({ renderer });
-  const contentHtml = await marked.parse(markdownContent);
-
-  return {
-    title: frontmatter.title ?? "Untitled Document",
-    contentHtml,
-    headings,
-  };
-}
+import { docPagesPromise, getMarkdownContent } from "../../../islands/markdownModules";
 
 export default createRoute(async (c) => {
+  const docPages = await docPagesPromise; // Await the pre-parsed doc pages
   const slug = c.req.param("slug") ?? docPages[0]?.slug ?? "getting-started"; // Default to the first page or 'getting-started'
-  const { contentHtml, title, headings } = await getMarkdownContent(slug);
+  const { contentHtml, title: pageTitle, headings } = await getMarkdownContent(slug); // Renamed title to pageTitle to avoid conflict
 
   return c.render(
+    // The JSX content for the page
     <>
-      <title>{title} | HonoX Docs</title>
+      <title>{pageTitle} | HonoX Docs</title>
       <div className="font-sans">
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -102,7 +32,7 @@ export default createRoute(async (c) => {
 
             {/* Main Content */}
             <main className="md:col-span-9 space-y-6 prose prose-invert max-w-none prose-h1:text-3xl prose-h1:font-bold prose-h1:text-white prose-h1:mb-6 prose-h2:text-2xl prose-h2:font-semibold prose-h2:text-white prose-h2:mt-8 prose-h2:mb-4 prose-headings:text-white prose-a:text-sky-400 hover:prose-a:text-sky-500 prose-strong:text-white prose-code:bg-neutral-800 prose-code:p-0.5 prose-code:px-1.5 prose-code:rounded prose-code:font-mono prose-code:text-sm prose-pre:bg-neutral-900 prose-pre:p-4 prose-pre:rounded-lg prose-img:rounded-md prose-img:shadow-lg">
-              {/* <h1 className="text-3xl font-bold text-white mb-6">{title}</h1> */}
+              {/* The h1 is already part of the Markdown content, typically */}
               <div dangerouslySetInnerHTML={{ __html: contentHtml }} />
             </main>
 
@@ -127,6 +57,10 @@ export default createRoute(async (c) => {
           </div>
         </div>
       </div>
-    </>
+    </>,
+    // Props passed to the renderer (app/routes/_renderer.tsx)
+    /**{
+      // title: `${pageTitle} | HonoX Docs`
+    } **/
   );
 });
