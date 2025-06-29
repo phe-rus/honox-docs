@@ -20,13 +20,13 @@ export default function Header() {
           </Link>
 
           <nav className="flex items-center justify-center gap-5">
-            <Link href={"/docs"} className="font-light hover:text-primary text-md">
+            <Link href={"/docs"} className="font-medium hover:text-primary text-sm">
               Docs
             </Link>
-            <Link href={"/examples"} className="font-light hover:text-primary text-md">
+            <Link href={"/examples"} className="font-medium hover:text-primary text-sm">
               Examples
             </Link>
-            <Link href={"/discussions"} className="gap-1 font-light hover:text-primary text-md">
+            <Link href={"/discussions"} className="gap-1 font-medium hover:text-primary text-sm">
               Discussions <IconArrowUpRight className="h-4 w-4" />
             </Link>
           </nav>
