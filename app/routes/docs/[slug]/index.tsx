@@ -1,7 +1,7 @@
 import { createRoute } from "honox/factory";
 import { Heading } from "@hono/react-renderer";
 import { marked } from "marked";
-import matter from "gray-matter";
+// import matter from "gray-matter"; // Will be dynamically imported
 
 // Type for the frontmatter
 interface Frontmatter {
@@ -24,27 +24,38 @@ interface HeadingInfo {
 // Use Vite's import.meta.glob to import all .md files from content/docs
 // IMPORTANT: For this to work effectively and provide raw content for gray-matter,
 // we need to import them as raw strings.
-const markdownModules = import.meta.glob("../../../../content/docs/*.md", {
+const markdownModules = import.meta.glob<{ default: string }>("../../../../content/docs/*.md", {
   query: "?raw",
-  import: "default",
+  import: "default", // Vite expects 'default' when query is used for raw content
   eager: true, // Eagerly load them
 });
 
-const docPages = Object.entries(markdownModules).map(([path, rawContent]) => {
-  const slug = path.split("/").pop()?.replace(".md", "") ?? "";
-  const { data } = matter(rawContent as string); // Parse frontmatter, ensure rawContent is string
-  return {
-    slug,
-    title: (data as Frontmatter).title ?? "Untitled",
-  };
-}).sort((a,b) => a.title.localeCompare(b.title)); // Sort pages alphabetically by title for consistent sidebar
+// Pre-parse frontmatter for all pages to build the sidebar
+// This will now happen once when the module is loaded.
+const docPagesPromise = (async () => {
+  const matter = (await import("gray-matter")).default;
+  return Object.entries(markdownModules).map(([path, rawContent]) => {
+    const slug = path.split("/").pop()?.replace(".md", "") ?? "";
+    // Ensure rawContent is treated as a string, as per the glob import type
+    const { data } = matter(rawContent);
+    return {
+      slug,
+      title: (data as Frontmatter).title ?? "Untitled",
+    };
+  }).sort((a, b) => a.title.localeCompare(b.title));
+})();
+
 
 async function getMarkdownContent(
   slug: string
 ): Promise<{ contentHtml: string; title: string; headings: HeadingInfo[] }> {
+  const matter = (await import("gray-matter")).default;
   const filePath = `../../../../content/docs/${slug}.md`;
 
-  if (!markdownModules[filePath]) {
+  // The type of markdownModules values should be string here due to `import: 'default'` and `query: '?raw'`
+  const rawContent = markdownModules[filePath] as string | undefined;
+
+  if (!rawContent) {
     return {
       title: "Not Found",
       contentHtml: "<p>Documentation page not found.</p>",
@@ -52,7 +63,7 @@ async function getMarkdownContent(
     };
   }
 
-  const rawContent = markdownModules[filePath];
+  // rawContent is already a string here
   const { data, content: markdownContent } = matter(rawContent);
   const frontmatter = data as Frontmatter;
 
@@ -76,6 +87,7 @@ async function getMarkdownContent(
 }
 
 export default createRoute(async (c) => {
+  const docPages = await docPagesPromise; // Await the pre-parsed doc pages
   const slug = c.req.param("slug") ?? docPages[0]?.slug ?? "getting-started"; // Default to the first page or 'getting-started'
   const { contentHtml, title, headings } = await getMarkdownContent(slug);
 
