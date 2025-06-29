@@ -1,5 +1,4 @@
 import { createRoute } from "honox/factory";
-import { Heading } from "@hono/react-renderer";
 import { marked } from "marked";
 import matter from "gray-matter";
 
@@ -36,7 +35,7 @@ const docPages = Object.entries(markdownModules).map(([path, rawContent]) => {
     slug,
     title: (data as Frontmatter).title ?? "Untitled",
   };
-}).sort((a,b) => a.title.localeCompare(b.title)); // Sort pages alphabetically by title for consistent sidebar
+}).sort((a, b) => a.title.localeCompare(b.title)); // Sort pages alphabetically by title for consistent sidebar
 
 async function getMarkdownContent(
   slug: string
@@ -58,10 +57,10 @@ async function getMarkdownContent(
   const headings: HeadingInfo[] = [];
   const renderer = new marked.Renderer();
 
-  renderer.heading = (text, level, raw, slugger) => {
+  renderer.heading.apply = function ({ text, depth, raw, slugger }: { text: string; depth: number; raw: string; slugger: any }) {
     const id = slugger.slug(raw);
-    headings.push({ level, text, id });
-    return `<h${level} id="${id}">${text}</h${level}>`;
+    headings.push({ level: depth, text, id });
+    return `<h${depth} id="${id}">${text}</h${depth}>`;
   };
 
   marked.use({ renderer });
@@ -80,7 +79,7 @@ export default createRoute(async (c) => {
 
   return c.render(
     <>
-      <Heading>{title} | HonoX Docs</Heading>
+      <title>{title} | HonoX Docs</title>
       <div className="font-sans">
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -92,9 +91,8 @@ export default createRoute(async (c) => {
                   <a
                     key={page.slug}
                     href={`/docs/${page.slug}`}
-                    className={`block px-2 py-1.5 rounded-md hover:bg-muted hover:text-foreground transition ${
-                      page.slug === slug ? "text-sky-500 font-semibold bg-sky-500/10" : ""
-                    }`}
+                    className={`block px-2 py-1.5 rounded-md hover:bg-muted hover:text-foreground transition ${page.slug === slug ? "text-sky-500 font-semibold bg-sky-500/10" : ""
+                      }`}
                   >
                     {page.title}
                   </a>
@@ -110,21 +108,21 @@ export default createRoute(async (c) => {
 
             {/* Right Sidebar for "On this page" */}
             {headings && headings.length > 0 && (
-                <aside className="hidden lg:block md:col-span-2 space-y-4 sticky top-24 self-start max-h-[calc(100vh-6rem)] overflow-y-auto pl-4 border-l border-neutral-800">
-                  <div className="text-sm font-semibold text-muted-foreground">On this page</div>
-                  <nav className="space-y-1.5 text-xs text-muted-foreground/85">
-                    {headings.filter(h => h.level > 1 && h.level < 4).map((heading) => ( // Typically only show h2 and h3
-                      <a
-                        key={heading.id}
-                        href={`#${heading.id}`}
-                        className="block hover:text-sky-400 transition leading-snug"
-                        style={{ marginLeft: `${(heading.level -2) * 0.75}rem` }} // Indent based on heading level
-                      >
-                        {heading.text}
-                      </a>
-                    ))}
-                  </nav>
-                </aside>
+              <aside className="hidden lg:block md:col-span-2 space-y-4 sticky top-24 self-start max-h-[calc(100vh-6rem)] overflow-y-auto pl-4 border-l border-neutral-800">
+                <div className="text-sm font-semibold text-muted-foreground">On this page</div>
+                <nav className="space-y-1.5 text-xs text-muted-foreground/85">
+                  {headings.filter(h => h.level > 1 && h.level < 4).map((heading) => ( // Typically only show h2 and h3
+                    <a
+                      key={heading.id}
+                      href={`#${heading.id}`}
+                      className="block hover:text-sky-400 transition leading-snug"
+                      style={{ marginLeft: `${(heading.level - 2) * 0.75}rem` }} // Indent based on heading level
+                    >
+                      {heading.text}
+                    </a>
+                  ))}
+                </nav>
+              </aside>
             )}
           </div>
         </div>
